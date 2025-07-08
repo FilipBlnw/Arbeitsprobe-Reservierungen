@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <title>Exklusive Tischreservierung</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+
+    body {
+      font-family: 'Inter', sans-serif;
+      max-width: 800px;
+      margin: auto;
+      padding: 20px;
+      background: linear-gradient(to right, #f9f9f9, #eef3f7);
+      color: #333;
+      animation: fadeIn 1s ease-in;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    h1 {
+      text-align: center;
+      font-weight: 800;
+      font-size: 2em;
+      color: #007ACC;
+    }
+
+    .section {
+      margin: 30px 0;
+      animation: fadeIn 1.2s ease-in-out;
+    }
+
+    select,
+    button {
+      padding: 12px;
+      font-size: 16px;
+      margin-top: 10px;
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+      transition: all 0.3s ease;
+    }
+
+    select:focus,
+    button:hover {
+      border-color: #007ACC;
+      box-shadow: 0 0 0 3px rgba(0, 122, 204, 0.2);
+      outline: none;
+    }
+
+    .tisch-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    .tisch {
+      background: #ffffff;
+      border: 2px solid #ccc;
+      border-radius: 12px;
+      text-align: center;
+      padding: 20px;
+      cursor: pointer;
+      transition: transform 0.3s ease, background 0.3s, border-color 0.3s;
+    }
+
+    .tisch:hover {
+      transform: scale(1.05);
+      background: #e6f7ff;
+      border-color: #00aaff;
+    }
+
+    .tisch.belegt {
+      background: #f0f0f0;
+      color: #999;
+      border-color: #ddd;
+      cursor: not-allowed;
+    }
+
+    .tisch.selected {
+      background: #007ACC;
+      color: #fff;
+      border-color: #005f99;
+      font-weight: 600;
+    }
+
+    iframe {
+      width: 100%;
+      height: 800px;
+      border: none;
+      margin-top: 30px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>Tischreservierung</h1>
+
+  <div class="section">
+    <label for="personen">Personen</label>
+    <select id="personen">
+      <option value="">– bitte wählen –</option>
+      <option value="1">1 Gast</option>
+      <option value="2">2 Gäste</option>
+      <option value="3">3 Gäste</option>
+      <option value="4">4 Gäste</option>
+      <option value="5">5 Gäste</option>
+      <option value="6">6 Gäste</option>
+    </select>
+  </div>
+
+  <div class="section" id="datumSection" style="display: none;">
+    <label for="datum">Wähle ein Datum:</label>
+    <select id="datum"></select>
+  </div>
+
+  <div class="section" id="zeitAuswahl" style="display: none;">
+    <label for="zeit">Verfügbare Uhrzeit:</label>
+    <select id="zeit">
+      <option value="">– bitte wählen –</option>
+    </select>
+  </div>
+
+  <div class="section" id="tischAuswahl" style="display: none;">
+    <label>Wähle einen Tisch:</label>
+    <div class="tisch-grid" id="tischGrid"></div>
+  </div>
+
+  <iframe id="formular" src="https://eu.jotform.com/form/251732044330344"></iframe>
+
+  <script>
+    const personenSelect = document.getElementById("personen");
+    const datumSelect = document.getElementById("datum");
+    const zeitSelect = document.getElementById("zeit");
+    const tischGrid = document.getElementById("tischGrid");
+    const tischAuswahlDiv = document.getElementById("tischAuswahl");
+    const zeitAuswahlDiv = document.getElementById("zeitAuswahl");
+    const datumSection = document.getElementById("datumSection");
+    const formularIframe = document.getElementById("formular");
+
+    const tischCount = 6;
+    const jotformBaseURL = "https://eu.jotform.com/form/251732044330344";
+
+    const today = new Date();
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      const iso = date.toISOString().split("T")[0];
+      const display = date.toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
+
+      const opt = document.createElement("option");
+      opt.value = iso;
+      opt.textContent = display;
+      datumSelect.appendChild(opt);
+    }
+
+    const belegteTische = {}; // Optional: dynamisch verwaltbar
+
+    personenSelect.addEventListener("change", () => {
+      datumSection.style.display = personenSelect.value ? "block" : "none";
+      zeitAuswahlDiv.style.display = "none";
+      tischAuswahlDiv.style.display = "none";
+      formularIframe.style.display = "none";
+      datumSelect.value = "";
+      zeitSelect.innerHTML = '<option value="">– bitte wählen –</option>';
+      tischGrid.innerHTML = "";
+    });
+
+    datumSelect.addEventListener("change", e => {
+      const zeiten = ["12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00"];
+      zeitSelect.innerHTML = '<option value="">– bitte wählen –</option>';
+
+      zeiten.forEach(zeit => {
+        const opt = document.createElement("option");
+        opt.value = zeit;
+        opt.textContent = zeit + " Uhr";
+        zeitSelect.appendChild(opt);
+      });
+
+      zeitAuswahlDiv.style.display = "block";
+      tischAuswahlDiv.style.display = "none";
+      formularIframe.style.display = "none";
+      tischGrid.innerHTML = "";
+    });
+
+    zeitSelect.addEventListener("change", e => {
+      const datum = datumSelect.value;
+      const zeit = e.target.value;
+      const key = datum + "_" + zeit;
+      tischGrid.innerHTML = "";
+
+      for (let i = 1; i <= tischCount; i++) {
+        const tisch = document.createElement("div");
+        tisch.className = "tisch";
+        tisch.textContent = "Tisch " + i;
+
+        if (belegteTische[key]?.includes(i)) {
+          tisch.classList.add("belegt");
+        } else {
+          tisch.addEventListener("click", () => {
+            const personen = personenSelect.value;
+            const params = new URLSearchParams({ datum, zeit, tisch: i, Personen: personen });
+            formularIframe.src = jotformBaseURL + "?" + params.toString();
+            formularIframe.style.display = "block";
+
+            Array.from(tischGrid.children).forEach(td => td.classList.remove("selected"));
+            tisch.classList.add("selected");
+          });
+        }
+
+        tischGrid.appendChild(tisch);
+      }
+
+      tischAuswahlDiv.style.display = "block";
+      formularIframe.style.display = "none";
+    });
+  </script>
+</body>
+</html>
+
+
